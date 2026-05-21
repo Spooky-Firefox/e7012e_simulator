@@ -94,6 +94,8 @@ The current implementation does not raycast to a tagged wall target. Instead it 
 - enqueue each accepted measurement with a sampled delay (`CAMERA_DELAY_BASE_MS` with `CAMERA_DELAY_JITTER_FRACTION` jitter)
 - emit queued frames later as `align <angle_deg> <confidence> <delay_ms>`
 
+This models a camera-plus-host pipeline where sensing and transport are not instantaneous. The queued delay is sampled per frame and exported directly in the wire payload.
+
 For UI/debugging it also records the selected major-axis angle as `camera_line_angle_deg`.
 
 ## Serial Thread
@@ -147,6 +149,14 @@ Important routes:
 - `POST /api/load_map`: reload a map from disk at runtime
 - `POST /api/reset`: reset simulation state and enqueue `reset` for the controller
 - `GET /metrics`: Prometheus exposition output
+
+The browser map view also includes a motion trail overlay:
+
+- breadcrumbs are sampled every `0.5 m` traveled
+- each breadcrumb stores body heading and steering direction at sample time
+- rendering draws a gray heading vector and a blue steering vector for each sample
+
+Vehicle drawing is meter-based (wheelbase/body/wheel constants scaled by map zoom) rather than fixed-size pixels, so visual proportions remain consistent across maps.
 
 ## Shared Snapshot
 

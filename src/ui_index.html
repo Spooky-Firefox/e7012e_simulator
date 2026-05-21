@@ -328,8 +328,17 @@
     const ctx = els.canvas.getContext('2d');
     const steerNeutralPwmUs = 1500;
     const throttleNeutralPwmUs = 1500;
-    const steerAnglePerUsDeg = 0.1;
+    const steerAnglePerUsDeg = 0.24;
     const steerMaxDeg = 35;
+    const wheelbaseM = 0.26;
+    const vehicleBodyLengthM = 0.34;
+    const vehicleBodyWidthM = 0.18;
+    const wheelTrackM = 0.18;
+    const wheelLengthM = 0.06;
+    const pathSampleStepM = 0.5;
+    const pathVectorLenM = 0.10;
+    const pathWheelVectorLenM = 0.08;
+    const pathMaxSamples = 4000;
     const distSensorAnglesDeg = [45, 0, -45];
     let latestState = null;
     let mapData = null;
@@ -340,6 +349,70 @@
     let lastFiniteDistCm = [Infinity, Infinity, Infinity];
     let distDroppedFlags = [false, false, false];
     let prevDroppedDistance = 0;
+    let pathTrail = [];
+    let lastPathPose = null;
+    let pathAccumulatedM = 0;
+
+    function clearPathTrail() {
+      pathTrail = [];
+      lastPathPose = null;
+      pathAccumulatedM = 0;
+    }
+
+    function updatePathTrail(state) {
+      if (!Number.isFinite(state.x_m) || !Number.isFinite(state.y_m) || !Number.isFinite(state.heading_deg)) {
+        return;
+      }
+
+      const headingRad = state.heading_deg * (Math.PI / 180);
+      const steerDeg = Math.max(
+        -steerMaxDeg,
+        Math.min(steerMaxDeg, (state.steer_pwm_us - steerNeutralPwmUs) * steerAnglePerUsDeg)
+      );
+      const steerRad = steerDeg * (Math.PI / 180);
+      const current = { x: state.x_m, y: state.y_m, headingRad, steerRad };
+
+      if (lastPathPose == null) {
+        pathTrail.push(current);
+        lastPathPose = current;
+        return;
+      }
+
+      const prev = lastPathPose;
+      const dx = current.x - prev.x;
+      const dy = current.y - prev.y;
+      const segmentLen = Math.hypot(dx, dy);
+
+      if (segmentLen < 1e-6) {
+        // Keep heading fresh without adding duplicate breadcrumbs.
+        if (pathTrail.length > 0) {
+          pathTrail[pathTrail.length - 1].headingRad = headingRad;
+          pathTrail[pathTrail.length - 1].steerRad = steerRad;
+        }
+        lastPathPose = current;
+        return;
+      }
+
+      pathAccumulatedM += segmentLen;
+      while (pathAccumulatedM >= pathSampleStepM) {
+        const distanceBackFromCurrent = pathAccumulatedM - pathSampleStepM;
+        const distanceFromSegmentStart = segmentLen - distanceBackFromCurrent;
+        const t = Math.max(0, Math.min(1, distanceFromSegmentStart / segmentLen));
+        const sampleSteerRad = prev.steerRad + (current.steerRad - prev.steerRad) * t;
+        pathTrail.push({
+          x: prev.x + dx * t,
+          y: prev.y + dy * t,
+          headingRad,
+          steerRad: sampleSteerRad
+        });
+        if (pathTrail.length > pathMaxSamples) {
+          pathTrail.shift();
+        }
+        pathAccumulatedM -= pathSampleStepM;
+      }
+
+      lastPathPose = current;
+    }
 
     function fitCanvas() {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -518,6 +591,7 @@
       const s = await getJson('/api/state');
       latestState = s;
       updateDistanceHistory(s);
+      updatePathTrail(s);
 
       els.pose.textContent = `t=${fmt(s.sim_time_s)}s  x=${fmt(s.x_m)}m  y=${fmt(s.y_m)}m`;
       els.motion.textContent = `v=${fmt(s.speed_mps)} m/s  heading=${fmt(s.heading_deg, 1)} deg`;
@@ -601,6 +675,83 @@
         ctx.stroke();
       }
 
+      if (pathTrail.length > 1) {
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        const startPoint = project(pathTrail[0].x, pathTrail[0].y);
+        ctx.moveTo(startPoint.x, startPoint.y);
+        for (let i = 1; i < pathTrail.length; i += 1) {
+          const p = project(pathTrail[i].x, pathTrail[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+
+        const pathVecLenPx = pathVectorLenM * scale;
+        const pathWheelVecLenPx = pathWheelVectorLenM * scale;
+        const pathVecHeadPx = Math.max(3, 0.045 * scale);
+        for (let i = 0; i < pathTrail.length; i += 1) {
+          const sample = pathTrail[i];
+          const start = project(sample.x, sample.y);
+          const bodyDir = { x: Math.cos(-sample.headingRad), y: Math.sin(-sample.headingRad) };
+          const bodyEnd = {
+            x: start.x + bodyDir.x * pathVecLenPx,
+            y: start.y + bodyDir.y * pathVecLenPx
+          };
+
+          ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+          ctx.lineWidth = 1.0;
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(bodyEnd.x, bodyEnd.y);
+          ctx.stroke();
+
+          const bodyLeftHead = {
+            x: bodyEnd.x - bodyDir.x * pathVecHeadPx - bodyDir.y * pathVecHeadPx * 0.6,
+            y: bodyEnd.y - bodyDir.y * pathVecHeadPx + bodyDir.x * pathVecHeadPx * 0.6
+          };
+          const bodyRightHead = {
+            x: bodyEnd.x - bodyDir.x * pathVecHeadPx + bodyDir.y * pathVecHeadPx * 0.6,
+            y: bodyEnd.y - bodyDir.y * pathVecHeadPx - bodyDir.x * pathVecHeadPx * 0.6
+          };
+          ctx.strokeStyle = 'rgba(71, 85, 105, 0.45)';
+          ctx.lineWidth = 0.9;
+          ctx.beginPath();
+          ctx.moveTo(bodyEnd.x, bodyEnd.y);
+          ctx.lineTo(bodyLeftHead.x, bodyLeftHead.y);
+          ctx.moveTo(bodyEnd.x, bodyEnd.y);
+          ctx.lineTo(bodyRightHead.x, bodyRightHead.y);
+          ctx.stroke();
+
+          const wheelDir = {
+            x: Math.cos(-(sample.headingRad + (sample.steerRad || 0))),
+            y: Math.sin(-(sample.headingRad + (sample.steerRad || 0)))
+          };
+          const wheelEnd = {
+            x: start.x + wheelDir.x * pathWheelVecLenPx,
+            y: start.y + wheelDir.y * pathWheelVecLenPx
+          };
+          const wheelLeftHead = {
+            x: wheelEnd.x - wheelDir.x * pathVecHeadPx - wheelDir.y * pathVecHeadPx * 0.6,
+            y: wheelEnd.y - wheelDir.y * pathVecHeadPx + wheelDir.x * pathVecHeadPx * 0.6
+          };
+          const wheelRightHead = {
+            x: wheelEnd.x - wheelDir.x * pathVecHeadPx + wheelDir.y * pathVecHeadPx * 0.6,
+            y: wheelEnd.y - wheelDir.y * pathVecHeadPx - wheelDir.x * pathVecHeadPx * 0.6
+          };
+          ctx.strokeStyle = 'rgba(37, 99, 235, 0.35)';
+          ctx.lineWidth = 0.9;
+          ctx.beginPath();
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(wheelEnd.x, wheelEnd.y);
+          ctx.moveTo(wheelEnd.x, wheelEnd.y);
+          ctx.lineTo(wheelLeftHead.x, wheelLeftHead.y);
+          ctx.moveTo(wheelEnd.x, wheelEnd.y);
+          ctx.lineTo(wheelRightHead.x, wheelRightHead.y);
+          ctx.stroke();
+        }
+      }
+
       if (!latestState) return;
 
       const center = project(latestState.x_m, latestState.y_m);
@@ -608,10 +759,12 @@
       const steerDeg = Math.max(-steerMaxDeg, Math.min(steerMaxDeg, (latestState.steer_pwm_us - steerNeutralPwmUs) * steerAnglePerUsDeg));
       const steerRad = steerDeg * (Math.PI / 180);
 
-      const vehicleLength = 36;
-      const vehicleWidth = 18;
-      const wheelLength = 10;
-      const wheelHalfTrack = 8;
+      // Render geometry in meters, converted to pixels with the current map scale.
+      const vehicleLength = vehicleBodyLengthM * scale;
+      const vehicleWidth = vehicleBodyWidthM * scale;
+      const wheelLength = wheelLengthM * scale;
+      const wheelHalfTrack = (wheelTrackM * 0.5) * scale;
+      const axleHalfWheelbase = (wheelbaseM * 0.5) * scale;
 
       function dirFromHeading(angleRad) {
         return { x: Math.cos(-angleRad), y: Math.sin(-angleRad) };
@@ -669,10 +822,90 @@
         ctx.stroke();
       }
 
-      drawWheel(vehicleLength * 0.33, wheelHalfTrack, headingRad + steerRad, '#111827');
-      drawWheel(vehicleLength * 0.33, -wheelHalfTrack, headingRad + steerRad, '#111827');
-      drawWheel(-vehicleLength * 0.33, wheelHalfTrack, headingRad, '#374151');
-      drawWheel(-vehicleLength * 0.33, -wheelHalfTrack, headingRad, '#374151');
+      drawWheel(axleHalfWheelbase, wheelHalfTrack, headingRad + steerRad, '#111827');
+      drawWheel(axleHalfWheelbase, -wheelHalfTrack, headingRad + steerRad, '#111827');
+      drawWheel(-axleHalfWheelbase, wheelHalfTrack, headingRad, '#374151');
+      drawWheel(-axleHalfWheelbase, -wheelHalfTrack, headingRad, '#374151');
+
+      // Steering indicator: 2 m arrow from front axle center in current wheel direction.
+      const arrowLengthPx = 2.0 * scale;
+      const arrowStart = {
+        x: center.x + headingDir.x * axleHalfWheelbase,
+        y: center.y + headingDir.y * axleHalfWheelbase
+      };
+      const steerDir = dirFromHeading(headingRad + steerRad);
+      const arrowEnd = {
+        x: arrowStart.x + steerDir.x * arrowLengthPx,
+        y: arrowStart.y + steerDir.y * arrowLengthPx
+      };
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(arrowStart.x, arrowStart.y);
+      ctx.lineTo(arrowEnd.x, arrowEnd.y);
+      ctx.stroke();
+
+      const arrowHeadLen = Math.max(8, 0.2 * scale);
+      const leftHead = {
+        x: arrowEnd.x - steerDir.x * arrowHeadLen - steerDir.y * arrowHeadLen * 0.6,
+        y: arrowEnd.y - steerDir.y * arrowHeadLen + steerDir.x * arrowHeadLen * 0.6
+      };
+      const rightHead = {
+        x: arrowEnd.x - steerDir.x * arrowHeadLen + steerDir.y * arrowHeadLen * 0.6,
+        y: arrowEnd.y - steerDir.y * arrowHeadLen - steerDir.x * arrowHeadLen * 0.6
+      };
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.moveTo(arrowEnd.x, arrowEnd.y);
+      ctx.lineTo(leftHead.x, leftHead.y);
+      ctx.lineTo(rightHead.x, rightHead.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Turn vector: lateral direction weighted by current yaw rate (left/right turn sense).
+      const yawRateRadS = Math.abs(steerRad) < 1e-6
+        ? 0
+        : (latestState.speed_mps / wheelbaseM) * Math.tan(steerRad);
+      const turnSign = yawRateRadS >= 0 ? 1 : -1;
+      const turnMagnitudeM = Math.min(1.2, Math.abs(yawRateRadS) * 0.5);
+      if (turnMagnitudeM > 0.02) {
+        const turnStart = {
+          x: center.x,
+          y: center.y
+        };
+        const turnDir = {
+          x: lateralDir.x * turnSign,
+          y: lateralDir.y * turnSign
+        };
+        const turnEnd = {
+          x: turnStart.x + turnDir.x * turnMagnitudeM * scale,
+          y: turnStart.y + turnDir.y * turnMagnitudeM * scale
+        };
+        const turnHeadLen = Math.max(6, 0.1 * scale);
+
+        ctx.strokeStyle = '#16a34a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(turnStart.x, turnStart.y);
+        ctx.lineTo(turnEnd.x, turnEnd.y);
+        ctx.stroke();
+
+        const turnLeft = {
+          x: turnEnd.x - turnDir.x * turnHeadLen - turnDir.y * turnHeadLen * 0.7,
+          y: turnEnd.y - turnDir.y * turnHeadLen + turnDir.x * turnHeadLen * 0.7
+        };
+        const turnRight = {
+          x: turnEnd.x - turnDir.x * turnHeadLen + turnDir.y * turnHeadLen * 0.7,
+          y: turnEnd.y - turnDir.y * turnHeadLen - turnDir.x * turnHeadLen * 0.7
+        };
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath();
+        ctx.moveTo(turnEnd.x, turnEnd.y);
+        ctx.lineTo(turnLeft.x, turnLeft.y);
+        ctx.lineTo(turnRight.x, turnRight.y);
+        ctx.closePath();
+        ctx.fill();
+      }
 
       const distValuesCm = [latestState.dist_left_cm, latestState.dist_center_cm, latestState.dist_right_cm];
       const maxRayM = 4.0;
@@ -760,6 +993,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
+        clearPathTrail();
         await tick();
       } catch (err) {
         els.mapStatus.textContent = String(err.message || err);

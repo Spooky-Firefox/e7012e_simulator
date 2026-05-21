@@ -1,5 +1,6 @@
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
+use std::collections::VecDeque;
 
 use crate::bicycle::VehicleState;
 use crate::constants;
@@ -20,6 +21,7 @@ pub enum SimCommand {
     Align {
         angle_deg: f32,
         confidence: f32,
+        delay_ms: u32,
     },
 }
 
@@ -36,9 +38,18 @@ impl SimCommand {
             SimCommand::Align {
                 angle_deg,
                 confidence,
-            } => format!("align {angle_deg:.3} {confidence:.3}\n"),
+                delay_ms,
+            } => format!("align {angle_deg:.3} {confidence:.3} {delay_ms}\n"),
         }
     }
+}
+
+struct QueuedCameraMeasurement {
+    available_at_s: f32,
+    angle_deg: f32,
+    confidence: f32,
+    nearest_axis_deg: f32,
+    delay_ms: u32,
 }
 
 pub struct EncoderEmulator {
@@ -161,11 +172,15 @@ impl DistanceEmulator {
 
 pub struct CameraEmulator {
     last_emit_s: f32,
+    pending: VecDeque<QueuedCameraMeasurement>,
 }
 
 impl CameraEmulator {
     pub fn new() -> Self {
-        Self { last_emit_s: 0.0 }
+        Self {
+            last_emit_s: 0.0,
+            pending: VecDeque::new(),
+        }
     }
 
     pub fn update<R: Rng>(
@@ -179,49 +194,76 @@ impl CameraEmulator {
         Option<f32>,
         u64,
     ) {
-        if state.sim_time_s - self.last_emit_s < 1.0 / constants::CAMERA_RATE_HZ {
-            return (None, None, None, None, 0);
+        let mut dropped = 0u64;
+        let mut line_angle_for_ui = None;
+
+        if state.sim_time_s - self.last_emit_s >= 1.0 / constants::CAMERA_RATE_HZ {
+            self.last_emit_s = state.sim_time_s;
+
+            let heading_deg = state.heading_rad.to_degrees();
+
+            // Angle from the nearest major axis (multiples of 90deg), in range [-45, 45]
+            let modulo = ((heading_deg % 90.0) + 90.0) % 90.0;
+            let from_axis = if modulo > 45.0 { modulo - 90.0 } else { modulo };
+
+            // Nearest major axis angle (for debug/display)
+            let nearest_axis_deg = heading_deg - from_axis;
+            line_angle_for_ui = Some(nearest_axis_deg);
+
+            // Only enqueue when within +/-CAMERA_MAX_ANGLE_DEG of a major axis.
+            if from_axis.abs() <= constants::CAMERA_MAX_ANGLE_DEG {
+                if rng.r#gen::<f32>() < constants::CAMERA_DROP_PROB {
+                    dropped = 1;
+                } else {
+                    let noise = Normal::new(0.0, constants::CAMERA_ANGLE_NOISE_STD_DEG as f64)
+                        .map(|n| n.sample(rng) as f32)
+                        .unwrap_or(0.0);
+                    let angle_deg = (from_axis + noise).clamp(
+                        -constants::CAMERA_MAX_ANGLE_DEG,
+                        constants::CAMERA_MAX_ANGLE_DEG,
+                    );
+
+                    // Confidence: 1.0 at 0deg offset, 0.0 at +/-CAMERA_MAX_ANGLE_DEG
+                    let confidence =
+                        (1.0 - from_axis.abs() / constants::CAMERA_MAX_ANGLE_DEG).clamp(0.0, 1.0);
+
+                    let jitter = rng.gen_range(
+                        (1.0 - constants::CAMERA_DELAY_JITTER_FRACTION)
+                            ..=(1.0 + constants::CAMERA_DELAY_JITTER_FRACTION),
+                    );
+                    let delay_ms =
+                        ((constants::CAMERA_DELAY_BASE_MS as f32) * jitter).round().max(0.0) as u32;
+
+                    self.pending.push_back(QueuedCameraMeasurement {
+                        available_at_s: state.sim_time_s + delay_ms as f32 / 1000.0,
+                        angle_deg,
+                        confidence,
+                        nearest_axis_deg,
+                        delay_ms,
+                    });
+                }
+            }
         }
-        self.last_emit_s = state.sim_time_s;
 
-        let heading_deg = state.heading_rad.to_degrees();
-
-        // Angle from the nearest major axis (multiples of 90°), in range [-45, 45]
-        let modulo = ((heading_deg % 90.0) + 90.0) % 90.0;
-        let from_axis = if modulo > 45.0 { modulo - 90.0 } else { modulo };
-
-        // Nearest major axis angle (for debug/display)
-        let nearest_axis_deg = heading_deg - from_axis;
-
-        // Only emit when within ±CAMERA_MAX_ANGLE_DEG of a major axis
-        if from_axis.abs() > constants::CAMERA_MAX_ANGLE_DEG {
-            return (None, None, None, Some(nearest_axis_deg), 0);
+        if self
+            .pending
+            .front()
+            .is_some_and(|next| next.available_at_s <= state.sim_time_s)
+            && let Some(measurement) = self.pending.pop_front()
+        {
+            return (
+                Some(SimCommand::Align {
+                    angle_deg: measurement.angle_deg,
+                    confidence: measurement.confidence,
+                    delay_ms: measurement.delay_ms,
+                }),
+                Some(measurement.angle_deg),
+                Some(measurement.confidence),
+                Some(measurement.nearest_axis_deg),
+                dropped,
+            );
         }
 
-        if rng.r#gen::<f32>() < constants::CAMERA_DROP_PROB {
-            return (None, None, None, Some(nearest_axis_deg), 1);
-        }
-
-        let noise = Normal::new(0.0, constants::CAMERA_ANGLE_NOISE_STD_DEG as f64)
-            .map(|n| n.sample(rng) as f32)
-            .unwrap_or(0.0);
-        let angle_deg = (from_axis + noise).clamp(
-            -constants::CAMERA_MAX_ANGLE_DEG,
-            constants::CAMERA_MAX_ANGLE_DEG,
-        );
-
-        // Confidence: 1.0 at 0° offset, 0.0 at ±CAMERA_MAX_ANGLE_DEG
-        let confidence = (1.0 - from_axis.abs() / constants::CAMERA_MAX_ANGLE_DEG).clamp(0.0, 1.0);
-
-        (
-            Some(SimCommand::Align {
-                angle_deg,
-                confidence,
-            }),
-            Some(angle_deg),
-            Some(confidence),
-            Some(nearest_axis_deg),
-            0,
-        )
+        (None, None, None, line_angle_for_ui, dropped)
     }
 }

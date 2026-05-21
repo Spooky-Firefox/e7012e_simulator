@@ -31,6 +31,8 @@ pub const CAMERA_RATE_HZ: f32 = 7.0;
 pub const CAMERA_ANGLE_NOISE_STD_DEG: f32 = 1.0;
 pub const CAMERA_DROP_PROB: f32 = 0.05;
 pub const CAMERA_MAX_ANGLE_DEG: f32 = 30.0;
+pub const CAMERA_DELAY_BASE_MS: u32 = 200;
+pub const CAMERA_DELAY_JITTER_FRACTION: f32 = 0.10;
 
 pub const SERIAL_BAUD: u32 = 115_200;
 pub const SERIAL_RETRY_MS: u64 = 1_000;

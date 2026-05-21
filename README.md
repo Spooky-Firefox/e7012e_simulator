@@ -12,6 +12,12 @@ Standalone simulator for the RP2350 controller. It runs a kinematic bicycle mode
 
 The simulator is intended to pair with `rp2350_controller` built with the `simulation` feature.
 
+Recent updates in this working tree:
+
+- camera `align` emissions are now delayed by a sampled latency (`200 ms` base with `+/-10%` jitter)
+- UI vehicle rendering now uses meter-based physical geometry instead of fixed pixel dimensions
+- UI now renders a sampled path trail with heading and steering direction vectors
+
 ## What It Emits
 
 The serial output path can generate:
@@ -20,6 +26,8 @@ The serial output path can generate:
 - `sim encoder-timeout`
 - `sim dist <left_cm> <center_cm> <right_cm>`
 - `align <angle_deg> <confidence> <delay_ms>`
+
+`delay_ms` is the simulated camera pipeline delay that was applied before the frame was emitted.
 
 The serial input path also parses controller telemetry so the UI can show what the firmware is commanding and estimating.
 
@@ -70,6 +78,14 @@ When fake-car mode is enabled in the UI, the serial thread stops trying to open 
 - Distance: casts three rays at `45 deg`, `0 deg`, and `-45 deg`, adds noise, and emits `inf` for missing returns
 - Camera: measures heading relative to the nearest major axis, clamps to `+/-30 deg`, adds noise, computes confidence, and can drop frames
 - Camera: measurements are queued before transmission using a base delay of `200 ms` with random jitter of `+/-10%`, and the emitted `align` payload includes the sampled delay in milliseconds
+
+## UI Visualization Notes
+
+- Vehicle geometry is rendered from physical constants (`wheelbase`, `body length/width`, `wheel track`, `wheel length`) projected through the current map scale.
+- Steering conversion in the UI uses `0.24 deg/us` from neutral PWM.
+- The map view stores breadcrumb samples every `0.5 m` and draws:
+	- a gray body-heading vector
+	- a blue steering-direction vector
 
 ## Map Format
 
