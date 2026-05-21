@@ -91,7 +91,8 @@ The current implementation does not raycast to a tagged wall target. Instead it 
 - randomly drop some frames
 - add angle noise
 - compute confidence from proximity to the axis
-- emit `align <angle_deg> <confidence>`
+- enqueue each accepted measurement with a sampled delay (`CAMERA_DELAY_BASE_MS` with `CAMERA_DELAY_JITTER_FRACTION` jitter)
+- emit queued frames later as `align <angle_deg> <confidence> <delay_ms>`
 
 For UI/debugging it also records the selected major-axis angle as `camera_line_angle_deg`.
 

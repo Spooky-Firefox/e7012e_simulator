@@ -19,7 +19,7 @@ The serial output path can generate:
 - `sim encoder <period_us>`
 - `sim encoder-timeout`
 - `sim dist <left_cm> <center_cm> <right_cm>`
-- `align <angle_deg> <confidence>`
+- `align <angle_deg> <confidence> <delay_ms>`
 
 The serial input path also parses controller telemetry so the UI can show what the firmware is commanding and estimating.
 
@@ -69,6 +69,7 @@ When fake-car mode is enabled in the UI, the serial thread stops trying to open 
 - Encoder: converts traveled distance to pulse periods, adds Gaussian jitter, drops some pulses, and emits timeout events after inactivity
 - Distance: casts three rays at `45 deg`, `0 deg`, and `-45 deg`, adds noise, and emits `inf` for missing returns
 - Camera: measures heading relative to the nearest major axis, clamps to `+/-30 deg`, adds noise, computes confidence, and can drop frames
+- Camera: measurements are queued before transmission using a base delay of `200 ms` with random jitter of `+/-10%`, and the emitted `align` payload includes the sampled delay in milliseconds
 
 ## Map Format
 
