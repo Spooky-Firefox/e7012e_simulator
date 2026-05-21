@@ -1197,6 +1197,109 @@
       ],
       "title": "Sent vs Actual Heading",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 1 },
+              { "color": "orange", "value": 2 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "Startup" }, "1": { "text": "Straight" }, "2": { "text": "Turning" } }, "type": "value" }
+          ],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 60
+      },
+      "id": 18,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "e7012e_sim_ctrl_drive_mode",
+          "legendFormat": "drive_mode (0=Startup 1=Straight 2=Turning)",
+          "refId": "A"
+        }
+      ],
+      "title": "Drive Mode Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "Re-armed" }, "1": { "text": "Blocked (turn fired)" } }, "type": "value" }
+          ],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 60
+      },
+      "id": 19,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "e7012e_sim_ctrl_front_was_blocked",
+          "legendFormat": "front_was_blocked (1 = waiting to re-arm)",
+          "refId": "A"
+        }
+      ],
+      "title": "Front-Blocked Hysteresis Flag",
+      "type": "timeseries"
     }
   ],
   "refresh": "500ms",
@@ -1212,10 +1315,8 @@
   },
   "time": {
     "from": "now-5m",
-    "to": "now"
-  },
-  "timezone": "browser",
-  "title": "E7012E Simulator",
+              "title": "Drive Mode Over Time",
+              "type": "timeseries"
+            }
+          ],
   "version": 2,
-  "weekStart": ""
-}

@@ -77,14 +77,6 @@ impl LoadedMap {
             .min_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
     }
 
-    pub fn nearest_axis_line(&self, point: Vec2) -> Option<(&MapLine, f32)> {
-        self.lines
-            .iter()
-            .filter(|line| matches!(line.kind, LineKind::Vertical | LineKind::Horizontal))
-            .map(|line| (line, point_segment_distance(point, line.segment)))
-            .min_by(|(_, d1), (_, d2)| d1.partial_cmp(d2).unwrap_or(std::cmp::Ordering::Equal))
-    }
-
     pub fn bounds(&self) -> (f32, f32, f32, f32) {
         let mut min_x = f32::INFINITY;
         let mut min_y = f32::INFINITY;

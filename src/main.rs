@@ -68,12 +68,11 @@ fn run_sim_loop(
 
     loop {
         let mut reset_now = false;
-        if let Ok(mut lock) = snapshot.write() {
-            if lock.reset_requested {
+        if let Ok(mut lock) = snapshot.write()
+            && lock.reset_requested {
                 lock.reset_requested = false;
                 reset_now = true;
             }
-        }
 
         if reset_now {
             vehicle = VehicleState::default();
@@ -198,11 +197,10 @@ fn publish_command(
 ) {
     let wire = cmd.to_wire();
 
-    if let SimCommand::Encoder { period_us } = cmd {
-        if let Ok(mut lock) = snapshot.write() {
+    if let SimCommand::Encoder { period_us } = cmd
+        && let Ok(mut lock) = snapshot.write() {
             lock.encoder_period_us = Some(period_us);
         }
-    }
 
     let _ = tx_cmd.try_send(wire);
 }

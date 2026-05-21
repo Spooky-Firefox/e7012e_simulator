@@ -36,6 +36,8 @@ pub struct SimMetrics {
     ctrl_observer_covariance: Gauge,
     ctrl_pid_p: Gauge,
     ctrl_pid_d: Gauge,
+    /// Drive mode: 0=Startup, 1=Straight, 2=Turning
+    ctrl_drive_mode: Gauge,
 }
 
 impl SimMetrics {
@@ -190,6 +192,13 @@ impl SimMetrics {
             Opts::new("ctrl_pid_d", "Steering PID derivative term from controller")
                 .namespace(constants::METRICS_NAMESPACE),
         )?;
+        let ctrl_drive_mode = Gauge::with_opts(
+            Opts::new(
+                "ctrl_drive_mode",
+                "Drive mode from controller: 0=Startup 1=Straight 2=Turning",
+            )
+            .namespace(constants::METRICS_NAMESPACE),
+        )?;
 
         registry.register(Box::new(sim_time_s.clone()))?;
         registry.register(Box::new(sim_tick_hz.clone()))?;
@@ -218,6 +227,7 @@ impl SimMetrics {
         registry.register(Box::new(ctrl_observer_covariance.clone()))?;
         registry.register(Box::new(ctrl_pid_p.clone()))?;
         registry.register(Box::new(ctrl_pid_d.clone()))?;
+        registry.register(Box::new(ctrl_drive_mode.clone()))?;
 
         Ok(Self {
             registry,
@@ -250,6 +260,7 @@ impl SimMetrics {
             ctrl_observer_covariance,
             ctrl_pid_p,
             ctrl_pid_d,
+            ctrl_drive_mode,
         })
     }
 
@@ -291,6 +302,8 @@ impl SimMetrics {
             .set(snapshot.serial_rx_pid_p.unwrap_or(0.0) as f64);
         self.ctrl_pid_d
             .set(snapshot.serial_rx_pid_d.unwrap_or(0.0) as f64);
+        self.ctrl_drive_mode
+            .set(snapshot.serial_rx_drive_mode.unwrap_or(0) as f64);
     }
 
     pub fn inc_serial_error(&self) {

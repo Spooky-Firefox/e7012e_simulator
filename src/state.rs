@@ -39,6 +39,8 @@ pub struct SimSnapshot {
     pub serial_rx_pid_p: Option<f32>,
     /// PID derivative term from controller telemetry
     pub serial_rx_pid_d: Option<f32>,
+    /// Drive mode reported by controller: 0=Startup, 1=Straight, 2=Turning
+    pub serial_rx_drive_mode: Option<u8>,
     pub serial_port_name: String,
     pub fake_car_enabled: bool,
     pub cmd_steer_pwm_us: u16,
@@ -87,6 +89,7 @@ impl SimSnapshot {
             serial_rx_observer_covariance: None,
             serial_rx_pid_p: None,
             serial_rx_pid_d: None,
+            serial_rx_drive_mode: None,
             serial_port_name,
             fake_car_enabled: false,
             cmd_steer_pwm_us: 1500,

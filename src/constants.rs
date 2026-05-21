@@ -3,9 +3,9 @@ use std::env;
 pub const SIM_TICK_HZ_DEFAULT: u32 = 500;
 pub const SIM_TICK_HZ_MAX: u32 = 1_000;
 
-pub const WHEELBASE_M: f32 = 0.12;
+pub const WHEELBASE_M: f32 = 0.26;
 pub const STEER_NEUTRAL_PWM_US: u16 = 1_500;
-pub const STEER_ANGLE_PER_US_DEG: f32 = 0.1;
+pub const STEER_ANGLE_PER_US_DEG: f32 = 0.24;
 pub const STEER_MAX_DEG: f32 = 35.0;
 
 pub const THROTTLE_NEUTRAL_PWM_US: u16 = 1_500;
@@ -21,7 +21,7 @@ pub const ENCODER_DROP_PROB: f32 = 0.01;
 pub const ENCODER_TIMEOUT_S: f32 = 0.25;
 
 pub const DIST_SENSOR_RATE_HZ: f32 = 20.0;
-pub const DIST_SENSOR_ANGLES_DEG: [f32; 3] = [20.0, 0.0, -20.0];
+pub const DIST_SENSOR_ANGLES_DEG: [f32; 3] = [45.0, 0.0, -45.0];
 pub const DIST_SENSOR_MIN_RANGE_M: f32 = 0.02;
 pub const DIST_SENSOR_MAX_RANGE_M: f32 = 4.0;
 pub const DIST_SENSOR_NOISE_STD_M: f32 = 0.01;
@@ -31,7 +31,6 @@ pub const CAMERA_RATE_HZ: f32 = 7.0;
 pub const CAMERA_ANGLE_NOISE_STD_DEG: f32 = 1.0;
 pub const CAMERA_DROP_PROB: f32 = 0.05;
 pub const CAMERA_MAX_ANGLE_DEG: f32 = 30.0;
-pub const CAMERA_REFERENCE_DISTANCE_FALLOFF_M: f32 = 3.0;
 
 pub const SERIAL_BAUD: u32 = 115_200;
 pub const SERIAL_RETRY_MS: u64 = 1_000;

@@ -85,12 +85,11 @@ impl EncoderEmulator {
             self.last_pulse_time_s = Some(time_s);
         }
 
-        if let Some(last) = self.last_pulse_time_s {
-            if !self.timeout_emitted && time_s - last >= constants::ENCODER_TIMEOUT_S {
+        if let Some(last) = self.last_pulse_time_s
+            && !self.timeout_emitted && time_s - last >= constants::ENCODER_TIMEOUT_S {
                 self.timeout_emitted = true;
                 out.push(SimCommand::EncoderTimeout);
             }
-        }
 
         (out, dropped)
     }
@@ -125,13 +124,11 @@ impl DistanceEmulator {
             let mut maybe_distance =
                 map.raycast_distance(state.pos, dir, constants::DIST_SENSOR_MAX_RANGE_M);
 
-            if let Some(distance) = maybe_distance {
-                if distance < constants::DIST_SENSOR_MIN_RANGE_M
-                    || distance > constants::DIST_SENSOR_MAX_RANGE_M
+            if let Some(distance) = maybe_distance
+                && (!(constants::DIST_SENSOR_MIN_RANGE_M..=constants::DIST_SENSOR_MAX_RANGE_M).contains(&distance))
                 {
                     maybe_distance = None;
                 }
-            }
 
             if rng.r#gen::<f32>() < constants::DIST_SENSOR_DROP_PROB {
                 maybe_distance = None;

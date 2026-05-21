@@ -173,12 +173,22 @@ fn process_rx_buffer(buffer: &mut String, snapshot: &Arc<RwLock<SimSnapshot>>) {
             if let Some(v) = parse_f32_after_marker(&line, "kalman3:") {
                 lock.serial_rx_pid_d = Some(v);
             }
+            if let Some(v) = parse_u8_after_marker(&line, "drive_mode:") {
+                lock.serial_rx_drive_mode = Some(v);
+            }
         }
     }
 
     if buffer.len() > 4096 {
         buffer.clear();
     }
+}
+
+fn parse_u8_after_marker(line: &str, marker: &str) -> Option<u8> {
+    let start = line.find(marker)? + marker.len();
+    let rest = &line[start..];
+    let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+    rest[..end].parse().ok()
 }
 
 fn parse_pwm_from_line(line: &str) -> Option<(u16, u16)> {

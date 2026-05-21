@@ -95,14 +95,3 @@ pub fn wrap_angle_rad(angle: f32) -> f32 {
     }
     a
 }
-
-pub fn wrap_angle_deg(angle: f32) -> f32 {
-    let mut a = angle;
-    while a > 180.0 {
-        a -= 360.0;
-    }
-    while a < -180.0 {
-        a += 360.0;
-    }
-    a
-}
