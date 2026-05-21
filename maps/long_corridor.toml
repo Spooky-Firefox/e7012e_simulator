@@ -1,0 +1,36 @@
+# Long straight corridor, 4 m wide, 20 m long.
+# Vehicle starts at (0.5, 0.5) heading east (0 deg) by default,
+# so the corridor runs along the Y-axis (north-south).
+# Units are meters in a right-handed 2D plane.
+
+[[line]]
+id = "left_wall"
+kind = "vertical"
+x1 = 0.0
+y1 = 0.0
+x2 = 0.0
+y2 = 20.0
+
+[[line]]
+id = "right_wall"
+kind = "vertical"
+x1 = 4.0
+y1 = 0.0
+x2 = 4.0
+y2 = 20.0
+
+[[line]]
+id = "bottom_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 4.0
+y2 = 0.0
+
+[[line]]
+id = "top_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 20.0
+x2 = 4.0
+y2 = 20.0

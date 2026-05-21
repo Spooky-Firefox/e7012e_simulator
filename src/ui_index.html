@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>E7012E Simulator</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --panel: #fffaf1;
+      --ink: #1f2937;
+      --muted: #5b6470;
+      --line-generic: #8b5e34;
+      --line-axis: #0f766e;
+      --vehicle: #dc2626;
+      --accent: #2563eb;
+      --ok: #15803d;
+      --bad: #b91c1c;
+      --stroke: #c8c1b4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 500px at 70% -100px, #ffedd5 0%, transparent 70%),
+        linear-gradient(160deg, #ece7de 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 18px;
+      padding: 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      box-shadow: 0 10px 25px rgba(25, 34, 48, 0.08);
+    }
+
+    .sidebar {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    h1 {
+      font-family: "Space Grotesk", "Avenir Next", sans-serif;
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    .sub {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      border: 1px solid var(--stroke);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fffdf8;
+    }
+
+    .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .value {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .row {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .row-tight {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 0;
+    }
+
+    input, select, button {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      padding: 10px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    button {
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--stroke);
+    }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .toggle input {
+      width: auto;
+      transform: scale(1.1);
+    }
+
+    .joystick-wrap {
+      display: grid;
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #joystick {
+      width: 130px;
+      height: 130px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: #f8f5ee;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+
+    .map-wrap {
+      padding: 10px;
+      display: grid;
+      gap: 10px;
+      min-height: 65vh;
+    }
+
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 8px;
+    }
+
+    #mapCanvas {
+      width: 100%;
+      height: calc(100vh - 100px);
+      min-height: 420px;
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      background: #f9f6ef;
+    }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      #mapCanvas { height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="panel sidebar">
+      <div>
+        <h1>E7012E Simulator</h1>
+        <p class="sub">Map + vehicle view with runtime serial and map controls.</p>
+      </div>
+
+      <div class="card">
+        <div class="label">Pose</div>
+        <div id="pose" class="value">-</div>
+        <div class="label" style="margin-top:10px;">Motion</div>
+        <div id="motion" class="value">-</div>
+        <div class="label" style="margin-top:10px;">Front steering</div>
+        <div id="steerAngle" class="value">-</div>
+        <div class="row" style="margin-top:10px; margin-bottom:0;">
+          <button id="resetSim" class="secondary">Reset simulation</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Serial output</div>
+        <div class="row">
+          <select id="serialPort"></select>
+          <label class="toggle">
+            <input id="fakeCar" type="checkbox" />
+            Fake car mode
+          </label>
+          <button id="saveConfig">Apply serial settings</button>
+        </div>
+        <div id="serialStatus" class="value">-</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Joystick</div>
+        <div class="joystick-wrap">
+          <canvas id="joystick" width="130" height="130"></canvas>
+          <div id="joystickReadout" class="value">steer 1500 | throttle 1500</div>
+          <div class="sub">X = steer, Y = throttle (up = forward). Release returns to neutral.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Throttle override</div>
+        <div class="row">
+          <label class="toggle">
+            <input id="throttleOverrideEnable" type="checkbox" />
+            Lock throttle
+          </label>
+        </div>
+        <div class="row-tight">
+          <input id="throttleOverrideSlider" type="range" min="1500" max="2000" step="5" value="1600" />
+          <div id="throttleOverrideReadout" class="value">1600 µs</div>
+          <div class="sub">Overrides joystick Y. Useful for hands-free response testing.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Map</div>
+        <div class="row">
+          <select id="mapPath"></select>
+          <button id="loadMap">Load map</button>
+          <button id="refreshMap" class="secondary">Refresh drawing</button>
+        </div>
+        <div id="mapStatus" class="value">-</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Sensors</div>
+        <div id="encoder" class="value">-</div>
+        <div id="dist" class="value">-</div>
+        <div id="camera" class="value">-</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Serial RX (controller → sim)</div>
+        <div id="serialRxPwm" class="value">-</div>
+        <div id="serialRxCount" class="value">-</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Controller constants</div>
+        <div class="row">
+          <select id="constName">
+            <option value="steering_kp">Steering Kp</option>
+            <option value="steering_ki">Steering Ki</option>
+            <option value="steering_kd">Steering Kd</option>
+            <option value="observer_q">Observer Q (process noise)</option>
+            <option value="observer_r">Observer R (meas. noise)</option>
+            <option value="observer_p0">Observer P0 (covariance init)</option>
+          </select>
+          <input id="constValue" type="number" step="any" placeholder="value" />
+          <button id="sendConst">Send constant</button>
+          <button id="resetCtrl" class="secondary">Reset controller</button>
+        </div>
+        <div id="constStatus" class="value">-</div>
+      </div>
+
+      <p class="sub">Metrics endpoint: <a href="/metrics" target="_blank">/metrics</a></p>
+    </aside>
+
+    <main class="panel map-wrap">
+      <div class="map-head">
+        <div id="mapMeta" class="sub">No map loaded</div>
+      </div>
+      <canvas id="mapCanvas"></canvas>
+    </main>
+  </div>
+
+  <script>
+    const els = {
+      pose: document.getElementById('pose'),
+      throttleOverrideEnable: document.getElementById('throttleOverrideEnable'),
+      throttleOverrideSlider: document.getElementById('throttleOverrideSlider'),
+      throttleOverrideReadout: document.getElementById('throttleOverrideReadout'),
+      motion: document.getElementById('motion'),
+      steerAngle: document.getElementById('steerAngle'),
+      encoder: document.getElementById('encoder'),
+      dist: document.getElementById('dist'),
+      camera: document.getElementById('camera'),
+      serialRxPwm: document.getElementById('serialRxPwm'),
+      serialRxCount: document.getElementById('serialRxCount'),
+      constName: document.getElementById('constName'),
+      constValue: document.getElementById('constValue'),
+      sendConst: document.getElementById('sendConst'),
+      resetCtrl: document.getElementById('resetCtrl'),
+      constStatus: document.getElementById('constStatus'),
+      serialPort: document.getElementById('serialPort'),
+      fakeCar: document.getElementById('fakeCar'),
+      saveConfig: document.getElementById('saveConfig'),
+      serialStatus: document.getElementById('serialStatus'),
+      joystick: document.getElementById('joystick'),
+      joystickReadout: document.getElementById('joystickReadout'),
+      mapPath: document.getElementById('mapPath'),
+      loadMap: document.getElementById('loadMap'),
+      refreshMap: document.getElementById('refreshMap'),
+      mapStatus: document.getElementById('mapStatus'),
+      mapMeta: document.getElementById('mapMeta'),
+      resetSim: document.getElementById('resetSim'),
+      canvas: document.getElementById('mapCanvas')
+    };
+
+    const ctx = els.canvas.getContext('2d');
+    const steerNeutralPwmUs = 1500;
+    const throttleNeutralPwmUs = 1500;
+    const steerAnglePerUsDeg = 0.1;
+    const steerMaxDeg = 35;
+    const distSensorAnglesDeg = [20, 0, -20];
+    let latestState = null;
+    let mapData = null;
+    let joyX = 0;
+    let joyY = 0;
+    let joystickDragging = false;
+    let lastControlSentMs = 0;
+    let lastFiniteDistCm = [Infinity, Infinity, Infinity];
+    let distDroppedFlags = [false, false, false];
+    let prevDroppedDistance = 0;
+
+    function fitCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const w = els.canvas.clientWidth;
+      const h = els.canvas.clientHeight;
+      els.canvas.width = Math.floor(w * ratio);
+      els.canvas.height = Math.floor(h * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      drawMapAndVehicle();
+    }
+
+    function fmt(v, digits = 2) {
+      return Number.isFinite(v) ? v.toFixed(digits) : 'inf';
+    }
+
+    async function getJson(url, options) {
+      const res = await fetch(url, options);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!res.ok) {
+        throw new Error(data.error || `request failed (${res.status})`);
+      }
+      return data;
+    }
+
+    async function refreshConfig() {
+      const cfg = await getJson('/api/config');
+      const current = cfg.serial_port_name || '';
+      const ports = Array.from(new Set([...(cfg.available_ports || []), current].filter(Boolean)));
+
+      els.serialPort.innerHTML = '';
+      if (ports.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = current || '/dev/ttyACM0';
+        opt.textContent = current || '/dev/ttyACM0';
+        els.serialPort.appendChild(opt);
+      } else {
+        for (const p of ports) {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          els.serialPort.appendChild(opt);
+        }
+      }
+
+      els.serialPort.value = current || els.serialPort.value;
+      els.fakeCar.checked = !!cfg.fake_car_enabled;
+
+      const currentMap = cfg.map_path || '';
+      const maps = Array.from(new Set([...(cfg.available_maps || []), currentMap].filter(Boolean)));
+      maps.sort();
+      els.mapPath.innerHTML = '';
+      for (const m of maps) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        els.mapPath.appendChild(opt);
+      }
+      if (currentMap) els.mapPath.value = currentMap;
+
+      if (cfg.map_load_error) {
+        els.mapStatus.textContent = cfg.map_load_error;
+        els.mapStatus.className = 'value bad';
+      }
+    }
+
+    function pwmFromJoystick() {
+      const steer = Math.round(steerNeutralPwmUs - joyX * 500);
+      const throttleOverride = els.throttleOverrideEnable.checked
+        ? parseInt(els.throttleOverrideSlider.value, 10)
+        : Math.round(throttleNeutralPwmUs + joyY * 500);
+      return {
+        steer_pwm_us: Math.max(1000, Math.min(2000, steer)),
+        throttle_pwm_us: Math.max(1000, Math.min(2000, throttleOverride))
+      };
+    }
+
+    function updateDistanceHistory(state) {
+      const current = [state.dist_left_cm, state.dist_center_cm, state.dist_right_cm];
+      const droppedNow = Math.max(0, (state.dropped_distance || 0) - prevDroppedDistance);
+      prevDroppedDistance = state.dropped_distance || 0;
+
+      const infIndices = [];
+      for (let i = 0; i < current.length; i += 1) {
+        if (Number.isFinite(current[i])) {
+          lastFiniteDistCm[i] = current[i];
+          distDroppedFlags[i] = false;
+        } else {
+          infIndices.push(i);
+        }
+      }
+
+      for (let i = 0; i < Math.min(droppedNow, infIndices.length); i += 1) {
+        distDroppedFlags[infIndices[i]] = true;
+      }
+    }
+
+    async function sendControl(force = false) {
+      const now = Date.now();
+      if (!force && now - lastControlSentMs < 50) {
+        return;
+      }
+      lastControlSentMs = now;
+
+      const payload = pwmFromJoystick();
+      els.joystickReadout.textContent = `steer ${payload.steer_pwm_us} | throttle ${payload.throttle_pwm_us}`;
+      await getJson('/api/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    function drawJoystick() {
+      const ctxJoy = els.joystick.getContext('2d');
+      const w = els.joystick.width;
+      const h = els.joystick.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const r = Math.min(w, h) * 0.36;
+
+      ctxJoy.clearRect(0, 0, w, h);
+      ctxJoy.fillStyle = '#f8f5ee';
+      ctxJoy.fillRect(0, 0, w, h);
+
+      ctxJoy.strokeStyle = '#d2ccbf';
+      ctxJoy.lineWidth = 1;
+      ctxJoy.beginPath();
+      ctxJoy.moveTo(cx, 8);
+      ctxJoy.lineTo(cx, h - 8);
+      ctxJoy.moveTo(8, cy);
+      ctxJoy.lineTo(w - 8, cy);
+      ctxJoy.stroke();
+
+      ctxJoy.strokeStyle = '#bcb4a6';
+      ctxJoy.lineWidth = 2;
+      ctxJoy.beginPath();
+      ctxJoy.arc(cx, cy, r, 0, Math.PI * 2);
+      ctxJoy.stroke();
+
+      const knobX = cx + joyX * r;
+      const knobY = cy - joyY * r;
+      ctxJoy.fillStyle = '#2563eb';
+      ctxJoy.beginPath();
+      ctxJoy.arc(knobX, knobY, 10, 0, Math.PI * 2);
+      ctxJoy.fill();
+    }
+
+    function setJoystickFromPointer(clientX, clientY) {
+      const rect = els.joystick.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const radius = Math.min(rect.width, rect.height) * 0.36;
+
+      let dx = (clientX - cx) / radius;
+      let dy = (cy - clientY) / radius;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 1) {
+        dx /= mag;
+        dy /= mag;
+      }
+
+      joyX = Math.max(-1, Math.min(1, dx));
+      joyY = Math.max(-1, Math.min(1, dy));
+      drawJoystick();
+    }
+
+    async function refreshMap() {
+      mapData = await getJson('/api/map');
+      const lineCount = (mapData.lines || []).length;
+      els.mapMeta.textContent = `Lines: ${lineCount}  Bounds: (${fmt(mapData.min_x)}, ${fmt(mapData.min_y)}) -> (${fmt(mapData.max_x)}, ${fmt(mapData.max_y)})`;
+      drawMapAndVehicle();
+    }
+
+    async function tick() {
+      const s = await getJson('/api/state');
+      latestState = s;
+      updateDistanceHistory(s);
+
+      els.pose.textContent = `t=${fmt(s.sim_time_s)}s  x=${fmt(s.x_m)}m  y=${fmt(s.y_m)}m`;
+      els.motion.textContent = `v=${fmt(s.speed_mps)} m/s  heading=${fmt(s.heading_deg, 1)} deg`;
+      const steerDeg = Math.max(-steerMaxDeg, Math.min(steerMaxDeg, (s.steer_pwm_us - steerNeutralPwmUs) * steerAnglePerUsDeg));
+      els.steerAngle.textContent = `${fmt(steerDeg, 1)} deg (pwm ${s.steer_pwm_us})`;
+      els.encoder.textContent = s.encoder_period_us != null ? `Encoder: ${fmt(s.encoder_period_us, 1)} us` : 'Encoder: timeout/no pulse';
+      els.dist.textContent = `Dist: ${fmt(s.dist_left_cm, 1)} | ${fmt(s.dist_center_cm, 1)} | ${fmt(s.dist_right_cm, 1)} cm`;
+      els.camera.textContent = s.camera_angle_deg != null ? `Camera: ${fmt(s.camera_angle_deg, 2)} deg @ ${fmt(s.camera_confidence, 2)}` : 'Camera: dropped';
+
+      if (s.serial_rx_steer_pwm_us != null && s.serial_rx_throttle_pwm_us != null) {
+        els.serialRxPwm.textContent = `steer=${s.serial_rx_steer_pwm_us} throttle=${s.serial_rx_throttle_pwm_us}`;
+        els.serialRxPwm.className = 'value ok';
+      } else {
+        els.serialRxPwm.textContent = 'no PWM received yet';
+        els.serialRxPwm.className = 'value';
+      }
+      els.serialRxCount.textContent = `lines parsed: ${s.serial_rx_lines || 0}`;
+
+      if (s.fake_car_enabled) {
+        els.serialStatus.textContent = `fake car active, commands=${s.serial_sent_commands}`;
+        els.serialStatus.className = 'value ok';
+      } else if (s.serial_connected) {
+        els.serialStatus.textContent = `connected ${s.serial_port_name}, commands=${s.serial_sent_commands}`;
+        els.serialStatus.className = 'value ok';
+      } else {
+        els.serialStatus.textContent = `disconnected ${s.serial_port_name}, errors=${s.serial_errors}`;
+        els.serialStatus.className = 'value bad';
+      }
+
+      if (s.map_load_error) {
+        els.mapStatus.textContent = s.map_load_error;
+        els.mapStatus.className = 'value bad';
+      } else {
+        els.mapStatus.textContent = `loaded: ${s.map_path} (${s.map_line_count} lines)`;
+        els.mapStatus.className = 'value ok';
+      }
+
+      drawMapAndVehicle();
+    }
+
+    function drawMapAndVehicle() {
+      const w = els.canvas.clientWidth;
+      const h = els.canvas.clientHeight;
+      if (!w || !h) return;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#f9f6ef';
+      ctx.fillRect(0, 0, w, h);
+
+      if (!mapData || !Array.isArray(mapData.lines) || mapData.lines.length === 0) {
+        return;
+      }
+
+      const pad = 24;
+      const minX = Number.isFinite(mapData.min_x) ? mapData.min_x : -1;
+      const minY = Number.isFinite(mapData.min_y) ? mapData.min_y : -1;
+      const maxX = Number.isFinite(mapData.max_x) ? mapData.max_x : 1;
+      const maxY = Number.isFinite(mapData.max_y) ? mapData.max_y : 1;
+
+      const worldW = Math.max(maxX - minX, 0.2);
+      const worldH = Math.max(maxY - minY, 0.2);
+      const scale = Math.min((w - pad * 2) / worldW, (h - pad * 2) / worldH);
+      const offsetX = (w - worldW * scale) * 0.5;
+      const offsetY = (h - worldH * scale) * 0.5;
+
+      function project(x, y) {
+        return {
+          x: offsetX + (x - minX) * scale,
+          y: h - (offsetY + (y - minY) * scale)
+        };
+      }
+
+      ctx.lineWidth = 2;
+      for (const line of mapData.lines) {
+        const a = project(line.x1, line.y1);
+        const b = project(line.x2, line.y2);
+        ctx.strokeStyle = line.kind === 'generic' ? '#8b5e34' : '#0f766e';
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+
+      if (!latestState) return;
+
+      const center = project(latestState.x_m, latestState.y_m);
+      const headingRad = (latestState.heading_deg || 0) * (Math.PI / 180);
+      const steerDeg = Math.max(-steerMaxDeg, Math.min(steerMaxDeg, (latestState.steer_pwm_us - steerNeutralPwmUs) * steerAnglePerUsDeg));
+      const steerRad = steerDeg * (Math.PI / 180);
+
+      const vehicleLength = 36;
+      const vehicleWidth = 18;
+      const wheelLength = 10;
+      const wheelHalfTrack = 8;
+
+      function dirFromHeading(angleRad) {
+        return { x: Math.cos(-angleRad), y: Math.sin(-angleRad) };
+      }
+
+      function rotate2d(x, y, angleRad) {
+        const c = Math.cos(-angleRad);
+        const s = Math.sin(-angleRad);
+        return { x: x * c - y * s, y: x * s + y * c };
+      }
+
+      function worldToCanvasLocal(localX, localY) {
+        const r = rotate2d(localX, localY, headingRad);
+        return { x: center.x + r.x, y: center.y + r.y };
+      }
+
+      const bodyCorners = [
+        worldToCanvasLocal(vehicleLength * 0.5, vehicleWidth * 0.5),
+        worldToCanvasLocal(vehicleLength * 0.5, -vehicleWidth * 0.5),
+        worldToCanvasLocal(-vehicleLength * 0.5, -vehicleWidth * 0.5),
+        worldToCanvasLocal(-vehicleLength * 0.5, vehicleWidth * 0.5)
+      ];
+
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(bodyCorners[0].x, bodyCorners[0].y);
+      for (let i = 1; i < bodyCorners.length; i += 1) {
+        ctx.lineTo(bodyCorners[i].x, bodyCorners[i].y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      const headingDir = dirFromHeading(headingRad);
+      const lateralDir = { x: -headingDir.y, y: headingDir.x };
+
+      function drawWheel(axleOffset, lateralOffset, wheelHeading, color) {
+        const wheelCenter = {
+          x: center.x + headingDir.x * axleOffset + lateralDir.x * lateralOffset,
+          y: center.y + headingDir.y * axleOffset + lateralDir.y * lateralOffset
+        };
+        const wheelDir = dirFromHeading(wheelHeading);
+        const p1 = {
+          x: wheelCenter.x - wheelDir.x * wheelLength * 0.5,
+          y: wheelCenter.y - wheelDir.y * wheelLength * 0.5
+        };
+        const p2 = {
+          x: wheelCenter.x + wheelDir.x * wheelLength * 0.5,
+          y: wheelCenter.y + wheelDir.y * wheelLength * 0.5
+        };
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+
+      drawWheel(vehicleLength * 0.33, wheelHalfTrack, headingRad + steerRad, '#111827');
+      drawWheel(vehicleLength * 0.33, -wheelHalfTrack, headingRad + steerRad, '#111827');
+      drawWheel(-vehicleLength * 0.33, wheelHalfTrack, headingRad, '#374151');
+      drawWheel(-vehicleLength * 0.33, -wheelHalfTrack, headingRad, '#374151');
+
+      const distValuesCm = [latestState.dist_left_cm, latestState.dist_center_cm, latestState.dist_right_cm];
+      const maxRayM = 4.0;
+      for (let i = 0; i < distSensorAnglesDeg.length; i += 1) {
+        const sensorAngle = headingRad + (distSensorAnglesDeg[i] * Math.PI / 180);
+        const rayDir = dirFromHeading(sensorAngle);
+        const rawDistCm = distValuesCm[i];
+        const heldDistCm = lastFiniteDistCm[i];
+        const hasRaw = Number.isFinite(rawDistCm);
+        const hasHeld = Number.isFinite(heldDistCm);
+        const drawDistCm = hasRaw ? rawDistCm : heldDistCm;
+        const distM = Number.isFinite(drawDistCm) ? Math.max(0, drawDistCm / 100) : maxRayM;
+        const rayLen = Math.min(distM, maxRayM) * scale;
+
+        const rayStart = {
+          x: center.x + headingDir.x * vehicleLength * 0.5,
+          y: center.y + headingDir.y * vehicleLength * 0.5
+        };
+        const rayEnd = {
+          x: rayStart.x + rayDir.x * rayLen,
+          y: rayStart.y + rayDir.y * rayLen
+        };
+
+        const isDropped = !hasRaw && distDroppedFlags[i] && hasHeld;
+        ctx.strokeStyle = isDropped ? '#dc2626' : (hasRaw ? '#0ea5e9' : (hasHeld ? '#0284c7' : '#94a3b8'));
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(rayStart.x, rayStart.y);
+        ctx.lineTo(rayEnd.x, rayEnd.y);
+        ctx.stroke();
+
+        if (hasRaw || hasHeld) {
+          ctx.fillStyle = isDropped ? '#dc2626' : '#0369a1';
+          ctx.beginPath();
+          ctx.arc(rayEnd.x, rayEnd.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    els.saveConfig.addEventListener('click', async () => {
+      try {
+        await getJson('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serial_port_name: els.serialPort.value,
+            fake_car_enabled: !!els.fakeCar.checked
+          })
+        });
+        await refreshConfig();
+      } catch (err) {
+        els.serialStatus.textContent = String(err.message || err);
+        els.serialStatus.className = 'value bad';
+      }
+    });
+
+    els.loadMap.addEventListener('click', async () => {
+      try {
+        await getJson('/api/load_map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: els.mapPath.value })
+        });
+        await refreshMap();
+        await refreshConfig();
+      } catch (err) {
+        els.mapStatus.textContent = String(err.message || err);
+        els.mapStatus.className = 'value bad';
+      }
+    });
+
+    els.refreshMap.addEventListener('click', async () => {
+      try {
+        await refreshMap();
+      } catch (err) {
+        els.mapStatus.textContent = String(err.message || err);
+        els.mapStatus.className = 'value bad';
+      }
+    });
+
+    els.resetSim.addEventListener('click', async () => {
+      try {
+        await getJson('/api/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        await tick();
+      } catch (err) {
+        els.mapStatus.textContent = String(err.message || err);
+        els.mapStatus.className = 'value bad';
+      }
+    });
+
+    window.addEventListener('resize', fitCanvas);
+
+    els.sendConst.addEventListener('click', async () => {
+      const name = els.constName.value;
+      const value = parseFloat(els.constValue.value);
+      if (!name || !Number.isFinite(value)) {
+        els.constStatus.textContent = 'invalid name or value';
+        els.constStatus.className = 'value bad';
+        return;
+      }
+      try {
+        await getJson('/api/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: `const ${name} ${value}` })
+        });
+        els.constStatus.textContent = `sent: const ${name} = ${value}`;
+        els.constStatus.className = 'value ok';
+      } catch (err) {
+        els.constStatus.textContent = String(err.message || err);
+        els.constStatus.className = 'value bad';
+      }
+    });
+
+    els.resetCtrl.addEventListener('click', async () => {
+      try {
+        await getJson('/api/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'reset' })
+        });
+        els.constStatus.textContent = 'reset sent to controller';
+        els.constStatus.className = 'value ok';
+      } catch (err) {
+        els.constStatus.textContent = String(err.message || err);
+        els.constStatus.className = 'value bad';
+      }
+    });
+
+    els.throttleOverrideSlider.addEventListener('input', () => {
+      els.throttleOverrideReadout.textContent = `${els.throttleOverrideSlider.value} µs`;
+    });
+
+    els.joystick.addEventListener('pointerdown', async (ev) => {
+      joystickDragging = true;
+      els.joystick.setPointerCapture(ev.pointerId);
+      setJoystickFromPointer(ev.clientX, ev.clientY);
+      try {
+        await sendControl(true);
+      } catch (_) {}
+    });
+
+    els.joystick.addEventListener('pointermove', async (ev) => {
+      if (!joystickDragging) return;
+      setJoystickFromPointer(ev.clientX, ev.clientY);
+      try {
+        await sendControl(false);
+      } catch (_) {}
+    });
+
+    async function releaseJoystick() {
+      if (!joystickDragging) return;
+      joystickDragging = false;
+      joyX = 0;
+      joyY = 0;
+      drawJoystick();
+      try {
+        await sendControl(true);
+      } catch (_) {}
+    }
+
+    els.joystick.addEventListener('pointerup', releaseJoystick);
+    els.joystick.addEventListener('pointercancel', releaseJoystick);
+    els.joystick.addEventListener('lostpointercapture', releaseJoystick);
+
+    (async function init() {
+      fitCanvas();
+      drawJoystick();
+      await refreshConfig();
+      await sendControl(true);
+      await refreshMap();
+      await tick();
+      setInterval(async () => {
+        try {
+          await tick();
+        } catch (err) {
+          els.serialStatus.textContent = String(err.message || err);
+          els.serialStatus.className = 'value bad';
+        }
+      }, 33);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# Empty open area for testing, 20 m x 20 m.
+# No interior features — only a bounding perimeter so raycasting
+# never returns infinite distances and the map loader does not error.
+# Units are meters in a right-handed 2D plane.
+
+[[line]]
+id = "left_wall"
+kind = "vertical"
+x1 = 0.0
+y1 = 0.0
+x2 = 0.0
+y2 = 20.0
+
+[[line]]
+id = "right_wall"
+kind = "vertical"
+x1 = 20.0
+y1 = 0.0
+x2 = 20.0
+y2 = 20.0
+
+[[line]]
+id = "bottom_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 20.0
+y2 = 0.0
+
+[[line]]
+id = "top_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 20.0
+x2 = 20.0
+y2 = 20.0

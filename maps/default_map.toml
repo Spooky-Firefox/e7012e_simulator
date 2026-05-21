@@ -1,0 +1,50 @@
+# Map geometry for simulator raycasting.
+# Units are meters in a right-handed 2D plane.
+
+[[line]]
+id = "left_wall"
+kind = "vertical"
+x1 = 0.0
+y1 = 0.0
+x2 = 0.0
+y2 = 8.0
+
+[[line]]
+id = "right_wall"
+kind = "vertical"
+x1 = 3.0
+y1 = 0.0
+x2 = 3.0
+y2 = 8.0
+
+[[line]]
+id = "top_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 8.0
+x2 = 3.0
+y2 = 8.0
+
+[[line]]
+id = "bottom_wall"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 3.0
+y2 = 0.0
+
+[[line]]
+id = "inner_vertical"
+kind = "vertical"
+x1 = 1.5
+y1 = 1.0
+x2 = 1.5
+y2 = 7.0
+
+[[line]]
+id = "inner_horizontal"
+kind = "horizontal"
+x1 = 0.4
+y1 = 4.2
+x2 = 2.6
+y2 = 4.2
