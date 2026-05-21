@@ -1,0 +1,197 @@
+# Corridor loop made only from axis-aligned segments and 90-degree turns.
+# The drivable corridor is the space between the outer and inner step-loops.
+# Units are meters in a right-handed 2D plane.
+
+# Outer loop
+[[line]]
+id = "outer_01"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 30.0
+y2 = 0.0
+
+[[line]]
+id = "outer_02"
+kind = "vertical"
+x1 = 30.0
+y1 = 0.0
+x2 = 30.0
+y2 = 8.0
+
+[[line]]
+id = "outer_03"
+kind = "horizontal"
+x1 = 30.0
+y1 = 8.0
+x2 = 22.0
+y2 = 8.0
+
+[[line]]
+id = "outer_04"
+kind = "vertical"
+x1 = 22.0
+y1 = 8.0
+x2 = 22.0
+y2 = 16.0
+
+[[line]]
+id = "outer_05"
+kind = "horizontal"
+x1 = 22.0
+y1 = 16.0
+x2 = 30.0
+y2 = 16.0
+
+[[line]]
+id = "outer_06"
+kind = "vertical"
+x1 = 30.0
+y1 = 16.0
+x2 = 30.0
+y2 = 30.0
+
+[[line]]
+id = "outer_07"
+kind = "horizontal"
+x1 = 30.0
+y1 = 30.0
+x2 = 0.0
+y2 = 30.0
+
+[[line]]
+id = "outer_08"
+kind = "vertical"
+x1 = 0.0
+y1 = 30.0
+x2 = 0.0
+y2 = 22.0
+
+[[line]]
+id = "outer_09"
+kind = "horizontal"
+x1 = 0.0
+y1 = 22.0
+x2 = 8.0
+y2 = 22.0
+
+[[line]]
+id = "outer_10"
+kind = "vertical"
+x1 = 8.0
+y1 = 22.0
+x2 = 8.0
+y2 = 14.0
+
+[[line]]
+id = "outer_11"
+kind = "horizontal"
+x1 = 8.0
+y1 = 14.0
+x2 = 0.0
+y2 = 14.0
+
+[[line]]
+id = "outer_12"
+kind = "vertical"
+x1 = 0.0
+y1 = 14.0
+x2 = 0.0
+y2 = 0.0
+
+# Inner loop (offset inward to form the corridor)
+[[line]]
+id = "inner_01"
+kind = "horizontal"
+x1 = 2.5
+y1 = 2.5
+x2 = 27.5
+y2 = 2.5
+
+[[line]]
+id = "inner_02"
+kind = "vertical"
+x1 = 27.5
+y1 = 2.5
+x2 = 27.5
+y2 = 10.5
+
+[[line]]
+id = "inner_03"
+kind = "horizontal"
+x1 = 27.5
+y1 = 10.5
+x2 = 19.5
+y2 = 10.5
+
+[[line]]
+id = "inner_04"
+kind = "vertical"
+x1 = 19.5
+y1 = 10.5
+x2 = 19.5
+y2 = 13.5
+
+[[line]]
+id = "inner_05"
+kind = "horizontal"
+x1 = 19.5
+y1 = 13.5
+x2 = 27.5
+y2 = 13.5
+
+[[line]]
+id = "inner_06"
+kind = "vertical"
+x1 = 27.5
+y1 = 13.5
+x2 = 27.5
+y2 = 27.5
+
+[[line]]
+id = "inner_07"
+kind = "horizontal"
+x1 = 27.5
+y1 = 27.5
+x2 = 2.5
+y2 = 27.5
+
+[[line]]
+id = "inner_08"
+kind = "vertical"
+x1 = 2.5
+y1 = 27.5
+x2 = 2.5
+y2 = 24.5
+
+[[line]]
+id = "inner_09"
+kind = "horizontal"
+x1 = 2.5
+y1 = 24.5
+x2 = 10.5
+y2 = 24.5
+
+[[line]]
+id = "inner_10"
+kind = "vertical"
+x1 = 10.5
+y1 = 24.5
+x2 = 10.5
+y2 = 11.5
+
+[[line]]
+id = "inner_11"
+kind = "horizontal"
+x1 = 10.5
+y1 = 11.5
+x2 = 2.5
+y2 = 11.5
+
+[[line]]
+id = "inner_12"
+kind = "vertical"
+x1 = 2.5
+y1 = 11.5
+x2 = 2.5
+y2 = 2.5

@@ -17,6 +17,9 @@ Recent updates in this working tree:
 - camera `align` emissions are now delayed by a sampled latency (`200 ms` base with `+/-10%` jitter)
 - UI vehicle rendering now uses meter-based physical geometry instead of fixed pixel dimensions
 - UI now renders a sampled path trail with heading and steering direction vectors
+- serial telemetry parsing now includes wall-centering correction fields from the controller
+- Prometheus and Grafana now expose and chart wall-correction telemetry
+- additional race/corridor map presets are available under `maps/`
 
 ## What It Emits
 
@@ -30,6 +33,7 @@ The serial output path can generate:
 `delay_ms` is the simulated camera pipeline delay that was applied before the frame was emitted.
 
 The serial input path also parses controller telemetry so the UI can show what the firmware is commanding and estimating.
+This now includes wall-correction terms in addition to PWM, setpoint, PID error, observer estimate/covariance, PID terms, and drive mode.
 
 ## Run
 
@@ -109,6 +113,7 @@ The simulator exports Prometheus metrics under the `e7012e_sim` namespace, inclu
 - last camera angle and confidence
 - dropped encoder, distance, and camera events
 - serial connection state, sent commands, and serial errors
+- controller telemetry fields such as steer/throttle PWM, setpoint, PID error, observer estimate/covariance, P/D terms, drive mode, and wall-correction components
 
 ## Source Layout
 

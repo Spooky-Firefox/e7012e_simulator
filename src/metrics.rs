@@ -36,6 +36,9 @@ pub struct SimMetrics {
     ctrl_observer_covariance: Gauge,
     ctrl_pid_p: Gauge,
     ctrl_pid_d: Gauge,
+    ctrl_wall_left_correction_deg: Gauge,
+    ctrl_wall_right_correction_deg: Gauge,
+    ctrl_wall_combined_correction_deg: Gauge,
     /// Drive mode: 0=Startup, 1=Straight, 2=Turning
     ctrl_drive_mode: Gauge,
 }
@@ -192,6 +195,27 @@ impl SimMetrics {
             Opts::new("ctrl_pid_d", "Steering PID derivative term from controller")
                 .namespace(constants::METRICS_NAMESPACE),
         )?;
+        let ctrl_wall_left_correction_deg = Gauge::with_opts(
+            Opts::new(
+                "ctrl_wall_left_correction_deg",
+                "Left-wall correction contribution reported by controller [deg]",
+            )
+            .namespace(constants::METRICS_NAMESPACE),
+        )?;
+        let ctrl_wall_right_correction_deg = Gauge::with_opts(
+            Opts::new(
+                "ctrl_wall_right_correction_deg",
+                "Right-wall correction contribution reported by controller [deg]",
+            )
+            .namespace(constants::METRICS_NAMESPACE),
+        )?;
+        let ctrl_wall_combined_correction_deg = Gauge::with_opts(
+            Opts::new(
+                "ctrl_wall_combined_correction_deg",
+                "Combined wall-centering correction reported by controller [deg]",
+            )
+            .namespace(constants::METRICS_NAMESPACE),
+        )?;
         let ctrl_drive_mode = Gauge::with_opts(
             Opts::new(
                 "ctrl_drive_mode",
@@ -227,6 +251,9 @@ impl SimMetrics {
         registry.register(Box::new(ctrl_observer_covariance.clone()))?;
         registry.register(Box::new(ctrl_pid_p.clone()))?;
         registry.register(Box::new(ctrl_pid_d.clone()))?;
+        registry.register(Box::new(ctrl_wall_left_correction_deg.clone()))?;
+        registry.register(Box::new(ctrl_wall_right_correction_deg.clone()))?;
+        registry.register(Box::new(ctrl_wall_combined_correction_deg.clone()))?;
         registry.register(Box::new(ctrl_drive_mode.clone()))?;
 
         Ok(Self {
@@ -260,6 +287,9 @@ impl SimMetrics {
             ctrl_observer_covariance,
             ctrl_pid_p,
             ctrl_pid_d,
+            ctrl_wall_left_correction_deg,
+            ctrl_wall_right_correction_deg,
+            ctrl_wall_combined_correction_deg,
             ctrl_drive_mode,
         })
     }
@@ -302,6 +332,12 @@ impl SimMetrics {
             .set(snapshot.serial_rx_pid_p.unwrap_or(0.0) as f64);
         self.ctrl_pid_d
             .set(snapshot.serial_rx_pid_d.unwrap_or(0.0) as f64);
+        self.ctrl_wall_left_correction_deg
+            .set(snapshot.serial_rx_wall_left_correction_deg.unwrap_or(0.0) as f64);
+        self.ctrl_wall_right_correction_deg
+            .set(snapshot.serial_rx_wall_right_correction_deg.unwrap_or(0.0) as f64);
+        self.ctrl_wall_combined_correction_deg
+            .set(snapshot.serial_rx_wall_combined_correction_deg.unwrap_or(0.0) as f64);
         self.ctrl_drive_mode
             .set(snapshot.serial_rx_drive_mode.unwrap_or(0) as f64);
     }

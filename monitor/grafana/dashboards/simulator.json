@@ -1108,6 +1108,33 @@
           "expr": "e7012e_sim_ctrl_pid_d",
           "legendFormat": "D term",
           "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "e7012e_sim_ctrl_wall_left_correction_deg",
+          "legendFormat": "wall left correction",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "e7012e_sim_ctrl_wall_right_correction_deg",
+          "legendFormat": "wall right correction",
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "e7012e_sim_ctrl_wall_combined_correction_deg",
+          "legendFormat": "wall combined correction",
+          "refId": "G"
         }
       ],
       "title": "Steering PID Internals",
@@ -1315,8 +1342,11 @@
   },
   "time": {
     "from": "now-5m",
-              "title": "Drive Mode Over Time",
-              "type": "timeseries"
-            }
-          ],
-  "version": 2,
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "E7012E Simulator",
+  "uid": "e7012e-simulator",
+  "version": 2
+}

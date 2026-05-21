@@ -1,0 +1,68 @@
+# 35 m x 35 m square race map.
+# Corridor is the area between the outer and inner rectangles.
+# Wall spacing stays within 1.8 m to 3.5 m.
+# Units are meters in a right-handed 2D plane.
+
+[[line]]
+id = "outer_left"
+kind = "vertical"
+x1 = 0.0
+y1 = 0.0
+x2 = 0.0
+y2 = 35.0
+
+[[line]]
+id = "outer_right"
+kind = "vertical"
+x1 = 35.0
+y1 = 0.0
+x2 = 35.0
+y2 = 35.0
+
+[[line]]
+id = "outer_bottom"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 35.0
+y2 = 0.0
+
+[[line]]
+id = "outer_top"
+kind = "horizontal"
+x1 = 0.0
+y1 = 35.0
+x2 = 35.0
+y2 = 35.0
+
+[[line]]
+id = "inner_left"
+kind = "vertical"
+x1 = 3.5
+y1 = 3.0
+x2 = 3.5
+y2 = 33.2
+
+[[line]]
+id = "inner_right"
+kind = "vertical"
+x1 = 32.8
+y1 = 3.0
+x2 = 32.8
+y2 = 33.2
+
+[[line]]
+id = "inner_bottom"
+kind = "horizontal"
+x1 = 3.5
+y1 = 3.0
+x2 = 32.8
+y2 = 3.0
+
+[[line]]
+id = "inner_top"
+kind = "horizontal"
+x1 = 3.5
+y1 = 33.2
+x2 = 32.8
+y2 = 33.2

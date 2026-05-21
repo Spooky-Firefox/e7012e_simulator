@@ -39,6 +39,12 @@ pub struct SimSnapshot {
     pub serial_rx_pid_p: Option<f32>,
     /// PID derivative term from controller telemetry
     pub serial_rx_pid_d: Option<f32>,
+    /// Left-wall centering correction contribution from controller telemetry [deg]
+    pub serial_rx_wall_left_correction_deg: Option<f32>,
+    /// Right-wall centering correction contribution from controller telemetry [deg]
+    pub serial_rx_wall_right_correction_deg: Option<f32>,
+    /// Combined wall-centering correction from controller telemetry [deg]
+    pub serial_rx_wall_combined_correction_deg: Option<f32>,
     /// Drive mode reported by controller: 0=Startup, 1=Straight, 2=Turning
     pub serial_rx_drive_mode: Option<u8>,
     pub serial_port_name: String,
@@ -89,6 +95,9 @@ impl SimSnapshot {
             serial_rx_observer_covariance: None,
             serial_rx_pid_p: None,
             serial_rx_pid_d: None,
+            serial_rx_wall_left_correction_deg: None,
+            serial_rx_wall_right_correction_deg: None,
+            serial_rx_wall_combined_correction_deg: None,
             serial_rx_drive_mode: None,
             serial_port_name,
             fake_car_enabled: false,

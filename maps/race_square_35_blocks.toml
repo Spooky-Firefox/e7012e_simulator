@@ -1,0 +1,335 @@
+# 35 m x 35 m square race map with protruding square blocks.
+# Corridor is the area between the outer and inner rectangles.
+# Base wall spacing stays within 1.8 m to 3.5 m.
+# Added square protrusions are 0.2 m to 0.5 m per side.
+# Units are meters in a right-handed 2D plane.
+
+[[line]]
+id = "outer_left"
+kind = "vertical"
+x1 = 0.0
+y1 = 0.0
+x2 = 0.0
+y2 = 35.0
+
+[[line]]
+id = "outer_right"
+kind = "vertical"
+x1 = 35.0
+y1 = 0.0
+x2 = 35.0
+y2 = 35.0
+
+[[line]]
+id = "outer_bottom"
+kind = "horizontal"
+x1 = 0.0
+y1 = 0.0
+x2 = 35.0
+y2 = 0.0
+
+[[line]]
+id = "outer_top"
+kind = "horizontal"
+x1 = 0.0
+y1 = 35.0
+x2 = 35.0
+y2 = 35.0
+
+[[line]]
+id = "inner_left"
+kind = "vertical"
+x1 = 3.5
+y1 = 3.0
+x2 = 3.5
+y2 = 33.2
+
+[[line]]
+id = "inner_right"
+kind = "vertical"
+x1 = 32.8
+y1 = 3.0
+x2 = 32.8
+y2 = 33.2
+
+[[line]]
+id = "inner_bottom"
+kind = "horizontal"
+x1 = 3.5
+y1 = 3.0
+x2 = 32.8
+y2 = 3.0
+
+[[line]]
+id = "inner_top"
+kind = "horizontal"
+x1 = 3.5
+y1 = 33.2
+x2 = 32.8
+y2 = 33.2
+
+# Corridor-facing protrusions (0.2 m to 0.5 m squares)
+
+# Protrusion A: 0.4 m square from left inner wall into corridor (toward x = 0)
+[[line]]
+id = "block_a_left"
+kind = "vertical"
+x1 = 3.1
+y1 = 10.0
+x2 = 3.1
+y2 = 10.4
+
+[[line]]
+id = "block_a_top"
+kind = "horizontal"
+x1 = 3.1
+y1 = 10.4
+x2 = 3.5
+y2 = 10.4
+
+[[line]]
+id = "block_a_right"
+kind = "vertical"
+x1 = 3.5
+y1 = 10.0
+x2 = 3.5
+y2 = 10.4
+
+[[line]]
+id = "block_a_bottom"
+kind = "horizontal"
+x1 = 3.1
+y1 = 10.0
+x2 = 3.5
+y2 = 10.0
+
+# Protrusion B: 0.3 m square from left inner wall
+[[line]]
+id = "block_b_left"
+kind = "vertical"
+x1 = 3.2
+y1 = 24.0
+x2 = 3.2
+y2 = 24.3
+
+[[line]]
+id = "block_b_top"
+kind = "horizontal"
+x1 = 3.2
+y1 = 24.3
+x2 = 3.5
+y2 = 24.3
+
+[[line]]
+id = "block_b_right"
+kind = "vertical"
+x1 = 3.5
+y1 = 24.0
+x2 = 3.5
+y2 = 24.3
+
+[[line]]
+id = "block_b_bottom"
+kind = "horizontal"
+x1 = 3.2
+y1 = 24.0
+x2 = 3.5
+y2 = 24.0
+
+# Protrusion C: 0.5 m square from bottom inner wall into corridor (toward y = 0)
+[[line]]
+id = "block_c_left"
+kind = "vertical"
+x1 = 14.0
+y1 = 2.5
+x2 = 14.0
+y2 = 3.0
+
+[[line]]
+id = "block_c_top"
+kind = "horizontal"
+x1 = 14.0
+y1 = 3.0
+x2 = 14.5
+y2 = 3.0
+
+[[line]]
+id = "block_c_right"
+kind = "vertical"
+x1 = 14.5
+y1 = 2.5
+x2 = 14.5
+y2 = 3.0
+
+[[line]]
+id = "block_c_bottom"
+kind = "horizontal"
+x1 = 14.0
+y1 = 2.5
+x2 = 14.5
+y2 = 2.5
+
+# Protrusion D: 0.2 m square from bottom inner wall
+[[line]]
+id = "block_d_left"
+kind = "vertical"
+x1 = 25.0
+y1 = 2.8
+x2 = 25.0
+y2 = 3.0
+
+[[line]]
+id = "block_d_top"
+kind = "horizontal"
+x1 = 25.0
+y1 = 3.0
+x2 = 25.2
+y2 = 3.0
+
+[[line]]
+id = "block_d_right"
+kind = "vertical"
+x1 = 25.2
+y1 = 2.8
+x2 = 25.2
+y2 = 3.0
+
+[[line]]
+id = "block_d_bottom"
+kind = "horizontal"
+x1 = 25.0
+y1 = 2.8
+x2 = 25.2
+y2 = 2.8
+
+# Protrusion E: 0.5 m square from right inner wall into corridor (toward x = 35)
+[[line]]
+id = "block_e_left"
+kind = "vertical"
+x1 = 32.8
+y1 = 8.0
+x2 = 32.8
+y2 = 8.5
+
+[[line]]
+id = "block_e_top"
+kind = "horizontal"
+x1 = 32.8
+y1 = 8.5
+x2 = 33.3
+y2 = 8.5
+
+[[line]]
+id = "block_e_right"
+kind = "vertical"
+x1 = 33.3
+y1 = 8.0
+x2 = 33.3
+y2 = 8.5
+
+[[line]]
+id = "block_e_bottom"
+kind = "horizontal"
+x1 = 32.8
+y1 = 8.0
+x2 = 33.3
+y2 = 8.0
+
+# Protrusion F: 0.3 m square from right inner wall
+[[line]]
+id = "block_f_left"
+kind = "vertical"
+x1 = 32.8
+y1 = 27.0
+x2 = 32.8
+y2 = 27.3
+
+[[line]]
+id = "block_f_top"
+kind = "horizontal"
+x1 = 32.8
+y1 = 27.3
+x2 = 33.1
+y2 = 27.3
+
+[[line]]
+id = "block_f_right"
+kind = "vertical"
+x1 = 33.1
+y1 = 27.0
+x2 = 33.1
+y2 = 27.3
+
+[[line]]
+id = "block_f_bottom"
+kind = "horizontal"
+x1 = 32.8
+y1 = 27.0
+x2 = 33.1
+y2 = 27.0
+
+# Protrusion G: 0.4 m square from top inner wall into corridor (toward y = 35)
+[[line]]
+id = "block_g_left"
+kind = "vertical"
+x1 = 11.0
+y1 = 33.2
+x2 = 11.0
+y2 = 33.6
+
+[[line]]
+id = "block_g_top"
+kind = "horizontal"
+x1 = 11.0
+y1 = 33.6
+x2 = 11.4
+y2 = 33.6
+
+[[line]]
+id = "block_g_right"
+kind = "vertical"
+x1 = 11.4
+y1 = 33.2
+x2 = 11.4
+y2 = 33.6
+
+[[line]]
+id = "block_g_bottom"
+kind = "horizontal"
+x1 = 11.0
+y1 = 33.2
+x2 = 11.4
+y2 = 33.2
+
+# Protrusion H: 0.2 m square from top inner wall
+[[line]]
+id = "block_h_left"
+kind = "vertical"
+x1 = 24.0
+y1 = 33.2
+x2 = 24.0
+y2 = 33.4
+
+[[line]]
+id = "block_h_top"
+kind = "horizontal"
+x1 = 24.0
+y1 = 33.4
+x2 = 24.2
+y2 = 33.4
+
+[[line]]
+id = "block_h_right"
+kind = "vertical"
+x1 = 24.2
+y1 = 33.2
+x2 = 24.2
+y2 = 33.4
+
+[[line]]
+id = "block_h_bottom"
+kind = "horizontal"
+x1 = 24.0
+y1 = 33.2
+x2 = 24.2
+y2 = 33.2

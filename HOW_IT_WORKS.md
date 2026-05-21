@@ -126,6 +126,9 @@ From that stream it updates UI-visible controller state, including:
 - observer covariance
 - PID P term
 - PID D term
+- left-wall correction contribution
+- right-wall correction contribution
+- combined wall-centering correction
 - numeric drive mode
 
 That makes the simulator UI useful as a controller introspection panel, not just a sensor generator.

@@ -173,6 +173,15 @@ fn process_rx_buffer(buffer: &mut String, snapshot: &Arc<RwLock<SimSnapshot>>) {
             if let Some(v) = parse_f32_after_marker(&line, "kalman3:") {
                 lock.serial_rx_pid_d = Some(v);
             }
+            if let Some(v) = parse_f32_after_marker(&line, "wall_left_deg:") {
+                lock.serial_rx_wall_left_correction_deg = Some(v);
+            }
+            if let Some(v) = parse_f32_after_marker(&line, "wall_right_deg:") {
+                lock.serial_rx_wall_right_correction_deg = Some(v);
+            }
+            if let Some(v) = parse_f32_after_marker(&line, "wall_combined_deg:") {
+                lock.serial_rx_wall_combined_correction_deg = Some(v);
+            }
             if let Some(v) = parse_u8_after_marker(&line, "drive_mode:") {
                 lock.serial_rx_drive_mode = Some(v);
             }
