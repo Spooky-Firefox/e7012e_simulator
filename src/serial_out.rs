@@ -187,7 +187,9 @@ fn process_rx_buffer(buffer: &mut String, snapshot: &Arc<RwLock<SimSnapshot>>) {
 fn parse_u8_after_marker(line: &str, marker: &str) -> Option<u8> {
     let start = line.find(marker)? + marker.len();
     let rest = &line[start..];
-    let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(rest.len());
     rest[..end].parse().ok()
 }
 
