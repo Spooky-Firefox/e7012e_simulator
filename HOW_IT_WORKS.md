@@ -1,95 +1,176 @@
-# How It Works
+# How the Simulator Works
 
-## Thread model
+## Thread Model
 
-The simulator runs three concurrent paths:
+The simulator splits work across three concurrent paths.
 
-1. Simulation loop thread (main thread)
-2. Serial output thread
-3. HTTP UI/metrics thread
+- Main thread: deterministic simulation loop
+- Serial thread: serial reconnect, command output, and controller telemetry parsing
+- HTTP thread: browser UI, JSON API, and Prometheus metrics
 
-This keeps time-critical simulation updates independent from serial stalls and web polling.
+This keeps the simulation tick independent from serial stalls and HTTP polling.
 
-## Simulation loop
+## Startup Flow
 
-The loop runs at fixed dt = 1 / SIM_TICK_HZ from src/constants.rs.
+On boot the simulator:
 
-At each tick:
+1. Reads the configured tick rate, map path, serial port, and UI bind address.
+2. Loads the selected TOML map.
+3. Creates a shared `SimSnapshot` protected by `RwLock`.
+4. Starts the serial thread.
+5. Starts the HTTP/UI thread.
+6. Enters the fixed-rate simulation loop.
 
-1. Compute control input profile (steer and throttle PWM)
-2. Integrate kinematic bicycle model
-3. Update sensor emulators (encoder, distance, camera)
-4. Publish command strings to serial queue
-5. Update shared snapshot and Prometheus gauges
+## Main Simulation Loop
 
-## Bicycle model
+`run_sim_loop` advances time at `1 / SIM_TICK_HZ` seconds per step.
 
-State:
+Each tick does the same sequence:
 
-- x, y position (m)
-- heading (rad)
-- speed (m/s)
+1. Check whether the UI requested a reset.
+2. Read the current commanded steer/throttle PWM values from the shared snapshot.
+3. Step the vehicle model with `step_vehicle`.
+4. Update encoder emulation and publish any resulting serial commands.
+5. Update distance emulation against the current loaded map.
+6. Update camera emulation from current vehicle heading.
+7. Write the latest vehicle and sensor state back into the snapshot.
+8. Sync Prometheus gauges from the snapshot.
+9. Sleep until the next absolute tick deadline.
 
-Model:
+The loop uses an absolute `next_tick` deadline, so short timing slip does not accumulate into permanent drift.
 
-- x_dot = v cos(theta)
-- y_dot = v sin(theta)
-- theta_dot = v / L * tan(delta)
-- v_dot = a_cmd - drag(v)
+## Vehicle Model
 
-Where:
+The simulated car state tracks:
 
-- L is wheelbase
-- delta comes from steering PWM mapping
-- a_cmd comes from throttle PWM mapping
+- position `(x, y)` in metres
+- heading in radians
+- speed in metres per second
+- current steer PWM and throttle PWM
+- simulation time
 
-## Map geometry
+The dynamics are implemented in `bicycle.rs` using a kinematic bicycle model with throttle acceleration, braking, and drag limits driven from PWM commands.
 
-Map is a TOML list of line segments in meters.
+## Encoder Emulation
 
-Distance sensors raycast against segments and keep nearest hit within range limits.
+`EncoderEmulator` accumulates traveled distance until it crosses `ENCODER_DISTANCE_PER_PULSE_M`.
 
-Camera emulation uses nearest vertical/horizontal tagged segment to produce alignment angle.
+For each pulse:
 
-## Sensor emulation
+- compute the period from the time since the last pulse
+- add Gaussian jitter
+- randomly drop some pulses
+- emit `sim encoder <period_us>` for the pulses that survive
 
-### Encoder
+If too much time passes without another pulse, it emits `sim encoder-timeout` once.
 
-- Converts traveled distance to pulses using ENCODER_DISTANCE_PER_PULSE_M
-- Emits sim encoder <period_us>
-- Applies period jitter and random drop probability
-- Emits sim encoder-timeout when pulse silence exceeds ENCODER_TIMEOUT_S
+## Distance Emulation
 
-### Distance
+`DistanceEmulator` emits at `DIST_SENSOR_RATE_HZ` rather than every simulation tick.
 
-- 3 rays at configurable mounting angles
-- Raycast nearest line hit
-- Drops value when out of sensor spec range
-- Applies random dropout and additive noise
-- Emits sim dist <left_cm> <center_cm> <right_cm>
-- Missing measurements are represented as inf
+For each emission:
 
-### Camera
+- cast three rays from the vehicle heading using sensor angles `45 deg`, `0 deg`, and `-45 deg`
+- intersect them against loaded map segments
+- discard hits outside the configured HC-SR04 range window
+- randomly drop some returns
+- add distance noise
+- emit `sim dist <left_cm> <center_cm> <right_cm>`
 
-- Chooses nearest vertical/horizontal line
-- Computes relative heading angle
-- Clamps to plus/minus 30 degrees
-- Applies noise and optional dropout
-- Emits align <angle_deg> <confidence>
+Missing values are represented as `f32::INFINITY` internally and serialized as `inf` in the outgoing command string.
 
-## RP2350 integration
+## Camera Emulation
 
-The simulator serial stream is intended for rp2350_controller built with simulation feature.
+`CameraEmulator` also runs at its own rate.
 
-Expected commands:
+The current implementation does not raycast to a tagged wall target. Instead it uses the vehicle heading itself:
 
-- sim encoder
-- sim encoder-timeout
-- sim dist
-- align
+- find the nearest major axis, meaning a multiple of `90 deg`
+- compute signed heading offset from that axis in `[-45, 45]`
+- suppress output when the offset exceeds `CAMERA_MAX_ANGLE_DEG`
+- randomly drop some frames
+- add angle noise
+- compute confidence from proximity to the axis
+- emit `align <angle_deg> <confidence>`
 
-## Metrics and dashboard
+For UI/debugging it also records the selected major-axis angle as `camera_line_angle_deg`.
 
-Prometheus metrics are exported at /metrics.
+## Serial Thread
 
-A starter Grafana dashboard is provided in monitor/grafana/dashboards/simulator.json.
+The serial thread has two jobs.
+
+### Outbound path
+
+- receive command strings from the bounded channel
+- reconnect automatically when the selected serial port changes or the port drops
+- write each command to the controller serial port
+- count sent commands and errors in the snapshot and metrics
+
+### Inbound path
+
+The thread also reads controller output and parses several formats:
+
+- `steer_us:` and `throttle_us:` key-value telemetry
+- `steer_pwm_us=` and `throttle_pwm_us=` logging output
+- CSV controller rows when the firmware uses `simple_csv`
+
+From that stream it updates UI-visible controller state, including:
+
+- commanded steering and throttle PWM seen from the controller
+- steering setpoint
+- PID error
+- heading estimate
+- observer covariance
+- PID P term
+- PID D term
+- numeric drive mode
+
+That makes the simulator UI useful as a controller introspection panel, not just a sensor generator.
+
+## Fake-Car Mode
+
+When `fake_car_enabled` is true, the serial thread skips opening a real serial port and simply consumes outbound commands from the channel. This exercises the simulator path without attached hardware.
+
+## HTTP UI
+
+The HTTP thread serves the embedded HTML UI and a small JSON API.
+
+Important routes:
+
+- `GET /api/state`: full serialized `SimSnapshot`
+- `GET /api/config`: current port, fake-car flag, map path, map error, available ports, available maps
+- `GET /api/map`: current map bounds and line geometry
+- `POST /api/config`: update serial port and fake-car mode
+- `POST /api/control`: update manual steer/throttle command values
+- `POST /api/command`: inject an arbitrary command string
+- `POST /api/load_map`: reload a map from disk at runtime
+- `POST /api/reset`: reset simulation state and enqueue `reset` for the controller
+- `GET /metrics`: Prometheus exposition output
+
+## Shared Snapshot
+
+`SimSnapshot` is the bridge across threads. It carries:
+
+- current vehicle pose and speed
+- latest sensor values
+- drop counters
+- serial connection and error counters
+- controller telemetry parsed from serial input
+- UI-selected command values
+- serial port and fake-car configuration
+- current map metadata and load errors
+- reset request flag
+
+The UI reads it, the serial thread updates serial-related fields, and the simulation loop updates the physics and sensor fields.
+
+## Maps
+
+Maps are loaded from TOML into `LoadedMap`.
+
+Each `[[line]]` entry becomes a `MapLine` with:
+
+- an `id`
+- a `kind`
+- a 2D segment
+
+The line `kind` is mainly exposed to the UI today. Distance sensing uses all lines generically through segment raycasting.
